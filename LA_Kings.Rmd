@@ -1,0 +1,886 @@
+---
+title: 'LA Kings: Regular Seasons 2005-06 to 2017-18'
+author: 'By: Jatinder Dhandi'
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+
+## Packages
+library(ggplot2)
+library(tidyr)
+library(plyr) 
+library(dplyr)  
+library(knitr) 
+library(tinytex)
+library(plotly)
+library(tidyverse)
+library(reshape2)
+library(grid)
+library(gridExtra)
+
+```
+
+#### Information about my data:
+The data I am using is data for my favorite hockey team Los Angeles Kings. I have downloded the data from NHL.com/stats. This data is from regular seasons 2005-06 to 2017-18.
+
+```{r echo=FALSE}
+
+# Loading csv into RStudio.
+LA_Kings <- read.csv("/Users/michael/Documents/P3/LA_Kings.csv", sep=",", header=TRUE)
+
+```
+
+# Univariate Plots
+
+Let's take a look at the structure of the data.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# Checking the structure of csv file.
+str(LA_Kings)
+
+```
+
+Let me describe the datapoints:  
+Team: LA Kings  
+Date: Date of the game  
+Month: Month of the game   
+Year: Year of the game  
+Venue_Home: 1 for true, 0 for false  
+Venue_Away: 1 for true, 0 for false  
+Against_Team: Opponent  
+Against_Division: Division of opponent  
+Win: 1 for win, 0 for loss  
+Loss: 1 for loss, 0 for win  
+OT_Loss: Overtime loss  
+Points: Points  
+Goals_For: Goals scored  
+Goals_Against: Goals scored against  
+SO_Win: Shoot out win  
+SO:Loss: Shoot out loss  
+Shots_For: Total shots for  
+Shots_Against: Total shots against  
+PP_Oppor: Powerplay opportunities  
+PP_Goals_For: Goals scored in powerplay  
+PP_Goals_Against: Goals against in powerplay  
+PP_Percentage: Powerplay scoring percentage  
+PK_Percn: Penalty kill percentage  
+
+I made some changes in the dataset to make it little more tidy. I created separate columns for month and year from date coloumn. I combined the over time losses into Loss coloumn which can give me accurate number of losses in one coloumn. I also separated venue home and away into separate coloumns. Since division information was missing, I added coloumn with division information. All these changes can make working with this dataset a lot easier.
+
+Let's start working on the data.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+cat(sprintf("Total games played: %d\n", nrow(LA_Kings)))
+cat(sprintf("Total wins: %d\n", sum(LA_Kings$Win)))
+cat(sprintf("Total losses: %d\n", sum(LA_Kings$Loss)))
+cat(sprintf("Total home games: %d\n", sum(LA_Kings$Venue_Home)))
+cat(sprintf("Total road games: %d\n", sum(LA_Kings$Venue_Away)))
+cat(sprintf("Total points: %d\n", sum(LA_Kings$Points)))
+cat(sprintf("Total goals for: %d\n", sum(LA_Kings$Goals_For)))
+cat(sprintf("Total goals against: %d\n", sum(LA_Kings$Goals_Against)))
+cat(sprintf("Total powerplay opportunites: %d\n", sum(LA_Kings$PP_Oppor)))
+cat(sprintf("Total powerplay goals for: %d\n", sum(LA_Kings$PP_Goals_For)))
+cat(sprintf("Summary of ppowerplay success rate:\n"))
+summary(LA_Kings$PP_Percentage)
+cat(sprintf("Summary of penalities killed:\n"))
+summary(LA_Kings$PK_Percn)
+
+```
+
+First, I would like to plot games played per year.
+
+```{r echo = FALSE, message=FALSE, warning=FALSE}
+
+# Plotting games per year
+ggplot(LA_Kings, aes(x = as.factor(Year)))+
+      geom_bar()+
+      theme(legend.position = "none",
+      plot.title = element_text(hjust = 0.5))+
+      geom_text(aes(label = ..count..),
+           vjust =-0.3, stat = 'count', colour = "black", size=4)+
+      ggtitle("Games Per Year") +
+      xlab("Years") +
+      ylab("Total Games")
+
+```
+
+Highest number of games were played in 2013, followed by 2009. One thing that surprised me is that Kings did win Stanley Cup in 2012 but chart shows only 43 games in that year. After doing some Google search, I found out that 2012-13 season was delayed due to issues between NHL and franchise owners. The first game of 2012-13 season was played on Jan 19, 2013 which means not a single game was played in 2012.
+
+Let's plot line graph for this data.
+
+```{r echo = FALSE, message=FALSE, warning=FALSE}
+
+# Plotting line graph for total games
+ggplot(data=LA_Kings, aes(x=Year)) +
+  geom_line(aes(fill=..count..), stat = "count")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  ggtitle("Games Per Year") +
+  xlab("Years") +
+  ylab("Total Games") 
+
+```
+
+Looks like there is no pattern in this data. Moving on to next explorations.
+
+
+Let's plot points per year.
+
+```{r echo = FALSE}
+
+# Creating new data frame with year and points only
+Points_year <- LA_Kings %>% 
+            select(Year, Points) %>%
+            group_by(Year) %>%
+            summarise_all(funs(sum))
+
+# Plotting points per year bar graph
+ggplot(aes(x=Year, y=Points), data=Points_year)+
+  geom_bar(stat='identity', position='dodge')+
+  theme(legend.position="top", legend.title=element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          text = element_text(size = 10))+
+  geom_text(aes(x=Year, label=Points),
+           position = position_dodge(width = 1), 
+           vjust=-0.3, colour = "red", size=4)+
+  ggtitle("Points Per Year") +
+  xlab("Years") +
+  ylab("Total Points")+
+  scale_x_discrete(limits= Points_year$Year)
+
+```
+
+Wow! Kings only crossed 100 points mark twice between 2005 to 2018. And both times Kings won Stanley Cup. So, crossing 100 points mark is a good indication that team will do well in play-offs. Also, there is another indication of poor performance in 2017 season and bad start of 2018 season. I would like to see same data in line chart to see the ups and downs.
+
+Let's see how line chart looks like for points per year.
+
+```{r echo = FALSE}
+
+# Plotting line graph for points per year
+ggplot(aes(x=Year, y=Points), data=Points_year)+
+  geom_line(stat='identity')+
+  geom_point()+
+  theme(plot.title = element_text(hjust = 0.5),
+          text = element_text(size = 10))+
+  ggtitle("Points Per Year") +
+  xlab("Years") +
+  ylab("Total Points")+
+  scale_x_discrete(limits= Points_year$Year)
+
+```
+
+Big drop in 2012, as we noted above, it was due to late start of 2012-13 season.
+
+
+Next, I would like to plot winning total over the years.
+
+```{r echo = FALSE}
+
+# Creating new data frame for results by year from the existing data frame
+results_year <- subset(LA_Kings, Win == "1", Year)
+
+# Plotting bar graph for for wins over the years
+ggplot(results_year, aes(x = as.factor(Year)))+
+  geom_bar(aes(fill = as.factor(Year)), fill="#999999")+
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))+
+  geom_text(aes(label = ..count..),
+           vjust =-0.3, stat = 'count', colour = "red", size=4)+
+  ggtitle("Wins By Year") +
+  xlab("Years") +
+  ylab("Total Wins")
+
+```
+
+So many details in this chart. The year 2013 was most successful with 52 wins, due to which, Kings won 2013-14 Stanley Cup. The 2018 is very strange, it explains the story of Kings' bad performance in 2017 season and poor start of 2018 season. In this chart, we can also see that Kings are getting better since 2010. To see it more clearly, let's plot the line chart.
+
+
+```{r echo = FALSE}
+
+# PLotting line chart
+ggplot(results_year, aes(x=Year, color=Year)) +
+  geom_line(stat='count')+
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))+
+  scale_x_continuous(breaks = seq(2005, 2018, 1),
+                     limits=c(2005, 2018))+
+  scale_y_continuous(breaks = seq(5, 60, 5),
+                     limits=c(5, 60))+
+  ggtitle("Wins By Year") +
+  xlab("Years") +
+  ylab("Total Wins")
+
+```
+
+This chart gives us little more clear picture. As you can see, Kings' performance got better after 2009, but 2012 and 2018 have been bad years. The pattern shows that Kings bounce back every 5-6 years.
+
+
+#### Let's see how their winning record stands against each team.
+
+```{r fig.height = 12, fig.width = 8, echo = FALSE}
+
+# Creating new data frame for wins against each team
+win_teams <- subset(LA_Kings, Win == "1", Against_Team)
+
+# Plotting horizontal bar chart to display win record against each team
+ggplot(win_teams, aes(x = as.factor(Against_Team)))+
+  geom_bar(aes(fill = as.factor(Against_Team)), fill = "#999999")+
+  coord_flip()+
+  theme(legend.position = "none")+
+  theme_bw()+
+  theme(legend.position = "none", 
+        plot.title = element_text(hjust = 0.5),
+        text = element_text(size = 20))+
+  geom_text(aes(label = ..count..),
+           hjust = 0, stat = 'count', colour = "black", size=8)+
+  ggtitle("Wins Against Each Team") +
+  xlab("Teams") +
+  ylab("Total Wins")
+
+```
+
+So, most wins are against Arizona Coyotes (35 wins). Second best record is against Dallas Stars (34 wins), followed by Edmonton Oilers and Anaheim Ducks with 33 wins against each team. I am little surprised, but very happy to see results against Ducks. I also noticed the ATL team that I didn't reconize. Google search revealed that it was Atlanta Thrashers, this team is known as Winnipeg Jets since 2011.
+
+
+#### Let's see how their lossing record stands against each team.
+
+```{r fig.height = 12, fig.width = 8, echo = FALSE}
+
+# Creating new data frame for losses against each team
+loss_teams <- subset(LA_Kings, Loss == "1", Against_Team)
+
+# Plotting horizontal bar chart to display loss record against each team
+ggplot(loss_teams, aes(x = as.factor(Against_Team)))+
+  geom_bar(aes(fill = as.factor(Against_Team)), fill = "#999999")+
+  coord_flip()+
+  theme(legend.position = "none")+
+  theme_bw()+
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5),
+        text = element_text(size = 20))+
+  geom_text(aes(label = ..count..),
+           hjust = 0, stat = 'count', colour = "black", size=8)+
+  ggtitle("Losses Against Each Team") +
+  xlab("Teams") +
+  ylab("Total Losses")
+
+```
+
+I am little dissapointed to see the results against their 2 big rivals, San Jose Sharks and Anaheim Ducks. Sharks and Ducks beat Kings 46 and 44 times respectevely. Kings also lost to Coyotes 42 times. The worst part of this picture is that all these 3 teams are from same division. I will ignore the results against Vegas (VGK) since Vegas only played one season.
+
+
+Next, I would like to plot wins by home and road games. First, I will prepare data frame that can make it easy for me to plot graphs.
+
+```{r echo = FALSE}
+
+# Pulling the coloumns I need to create the data frame for venue records
+Venue_wins <- LA_Kings %>% 
+              select(Year, Venue_Home, Venue_Away, Win) %>%
+              group_by(Year)
+
+# Pulling coloumns only for wins
+Venue_wins2 <- subset(Venue_wins, Win == "1")
+
+# Creatting the data frame to plot
+Venue_wins3 <- Venue_wins2 %>% 
+               select(Year, Venue_Home, Venue_Away, Win) %>%
+               group_by(Year) %>%
+               summarise_all(funs(sum))
+head(Venue_wins3)
+
+```
+Looks good, let's plot the bar graph.
+
+```{r echo = FALSE}
+
+# Plotting bar graph for for wins at home
+ggplot(aes(x=Year, y=Venue_Home), data=Venue_wins3)+
+  geom_bar(stat='identity', position='dodge')+
+  theme(legend.position="top", legend.title=element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          text = element_text(size = 10))+
+  geom_text(aes(x=Year, label=Venue_Home),
+           position = position_dodge(width = 1), 
+           vjust=-0.3, colour = "red", size=4)+
+  ggtitle("Wins At Home") +
+  xlab("Years") +
+  ylab("Total Wins")+
+  scale_x_discrete(limits= Points_year$Year)
+
+```
+
+Most home wins came in the year of 2013 (32 wins), followed by 2016 (26 wins), and 2010 with 25 wins. Some years were really bad with under 20 wins. I want to plot line to identify patterns.
+
+```{r echo = FALSE}
+
+ggplot(aes(x=Year, y=Venue_Home), data=Venue_wins3)+
+  geom_line()+
+  geom_point()+
+  theme(legend.position = "none", panel.grid.major = element_blank(),
+        plot.title = element_text(hjust = 0.5))+
+  scale_x_continuous(breaks = seq(2005, 2018, 1),
+                     limits=c(2005, 2018))+
+  scale_y_continuous(breaks = seq(5, 40, 5),
+                     limits=c(5, 40))+
+  ggtitle("Wins At Home") +
+  xlab("Years") +
+  ylab("Total Wins")
+
+```
+
+I don't see a clear pattern in this data. Looks like Kings had good years and bad years.
+
+
+Next, I would like to plot wins on the road.
+
+```{r echo = FALSE}
+
+# Plotting bar graph for for wins at home
+ggplot(aes(x=Year, y=Venue_Away), data=Venue_wins3)+
+  geom_bar(stat='identity', position='dodge')+
+  theme(legend.position="top", legend.title=element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          text = element_text(size = 10))+
+  geom_text(aes(x=Year, label=Venue_Away),
+           position = position_dodge(width = 1), 
+           vjust=-0.3, colour = "red", size=4)+
+  ggtitle("Wins On the Road") +
+  xlab("Years") +
+  ylab("Total Wins")+
+  scale_x_discrete(limits= Points_year$Year)
+
+
+```
+
+Looks like Kings have been consistent on the road since 2009, except a couple years. They performed well on the road in 2011 and 2013 which helped them to win Stanley Cup in 2012 and 2014. This is a indication that road wins play a big role in winning the cup.
+
+Ok, let's take a look at losses at home now. Once again, I will prepare the data frame for easier plotting.
+
+```{r echo = FALSE}
+
+# Pulling the coloumns I need to create the data frame for venue records
+Venue_losses <- LA_Kings %>% 
+                select(Year, Venue_Home, Venue_Away, Loss) %>%
+                group_by(Year)
+
+# Pulling coloumns only for losses
+Venue_losses2 <- subset(Venue_losses, Loss == "1")
+
+# Creatting the data frame to plot
+Venue_losses3 <- Venue_losses2 %>% 
+                 select(Year, Venue_Home, Venue_Away, Loss) %>%
+                 group_by(Year) %>%
+                 summarise_all(funs(sum))
+
+head(Venue_losses3)
+
+```
+
+Nice. Let's plot the bar graph.
+
+```{r echo = FALSE}
+
+# Plotting bar graph for for wins at home
+ggplot(aes(x=Year, y=Venue_Home), data=Venue_losses3)+
+  geom_bar(stat='identity', position='dodge')+
+  theme(legend.position="top", legend.title=element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          text = element_text(size = 10))+
+  geom_text(aes(x=Year, label=Venue_Home),
+           position = position_dodge(width = 1), 
+           vjust=-0.3, colour = "black", size=4)+
+  ggtitle("Losses At Home") +
+  xlab("Years") +
+  ylab("Total Losses")+
+  scale_x_discrete(limits= Points_year$Year)
+
+```
+
+2006 to 2008 were some rough years, Kings lost more than 20 games in each year. Kings performed well at home from 2012 to 2016. 2005 was the best year for home record. Next, I would like to plot losses on the road.
+
+```{r echo = FALSE}
+
+# Plotting bar graph for for wins at home
+ggplot(aes(x=Year, y=Venue_Away), data=Venue_losses3)+
+  geom_bar(stat='identity', position='dodge')+
+  theme(legend.position="top", legend.title=element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          text = element_text(size = 10))+
+  geom_text(aes(x=Year, label=Venue_Away),
+           position = position_dodge(width = 1), 
+           vjust=-0.3, colour = "red", size=4)+
+  ggtitle("Losses On the Road") +
+  xlab("Years") +
+  ylab("Total Losses")+
+  scale_x_discrete(limits= Points_year$Year)
+
+```
+
+Kings lost 20+ games on the road for most years. This is something they should work on. 2012 records looks great, I remember Kings were known as "Kings of the road"" in 2012 and that performance led to winning the Stanley Cup championship.
+
+# Univariate Analysis
+
+Kings played highest number of games in 2013, and lowest number of games in 2005. Kings won 512 games and lost 520 games. They scored 1141 points total between 2005 and 2018. They also scored highest number of points in 2013, which also means most wins in the same year. Kings did not perform well in 2017, followed by poor start of 2018 season. Kings beat Coyotes 35 times, Dallas 34 times, followed by 33 wins against Oilers and Ducks each. Sharks beat Kings 46 times, and Kings lost to ducks 44 times. This can hurt bad since both Sharks and Ducks are in same division with Kings.
+
+
+# Bivariate Plots
+
+
+#### Let's plot the bar graph to compare total wins and losses.
+
+```{r echo = FALSE}
+
+# Creating new data frame from existing data frame
+results <- data.frame("Wins" = LA_Kings$Win, "Losses" = LA_Kings$Loss)
+
+# Plotting bar graph for comparison
+results_plot = data.frame(value=apply(results,2,sum))
+results_plot$key = rownames(results_plot)
+ggplot(data=results_plot, aes(x=key, y=value, fill=key))+
+  ggtitle("Results By Total")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Results")+
+  ylab("Total")+
+  theme(legend.title=element_blank())+
+  geom_bar(colour="black", 
+  stat="identity",
+  width = 0.4)
+
+```
+
+As we can see in the plot, Kings lost more games than they won, which is a negative overall performance. We lost more than 50% games in those 13 years. This is not good.
+
+
+I wonder how records stand against each team. A comparison plot can give us answers.
+
+
+```{r fig.height = 12, fig.width = 10, echo = FALSE}
+
+# Creating new data frame with teams, wins and losses only
+Against_teams <- LA_Kings %>% 
+                  select(Against_Team, Win, Loss) %>%
+                  group_by(Against_Team) %>%
+                  summarise_all(funs(sum))
+
+# Creating new data frame by reshaping the data frame into long form
+Against_teams2 <- melt(Against_teams, id.vars='Against_Team')
+
+# Plotting side by side bars
+ggplot(Against_teams2, aes(x=Against_Team, y=value, fill=variable)) +
+    geom_bar(stat='identity', position='dodge')+
+    coord_flip()+
+    theme(legend.position="top", legend.title=element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          text = element_text(size = 20))+
+    geom_text(aes(x=Against_Team, y=value, label=value),
+           position = position_dodge(width = 1), 
+           hjust=0, colour = "black", size=6)+
+    ggtitle("Win/Loss Comparison Against Each Team") +
+    xlab("Teams") +
+    ylab("Total")
+
+```
+
+Once again, records against Sharks and Ducks looks very bad. These 2 teams are in the same divison along with Kings, which makes it even more deadly. Other than that, Kings are neck to neck with other teams.
+
+
+Next, I would like to compare home vs away records.
+
+```{r echo = FALSE}
+
+# Creating new data frams with year and venues only
+Home_away <- LA_Kings %>% 
+            select(Year, Venue_Home, Venue_Away) %>%
+            group_by(Year) %>%
+            summarise_all(funs(sum))
+
+# Creating new data frame by reshaping the previous data frame into long form
+Home_away2 <- melt(Home_away, id.vars='Year')
+
+# Plotting side by side bars
+ggplot(Home_away2, aes(x=Year, y=value, fill=variable)) +
+   geom_bar(stat='identity', position='dodge')+
+   theme(legend.position="top", legend.title=element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          text = element_text(size = 10))+
+    ggtitle("Home/Away Venue Comparison By Year") +
+    xlab("Year") +
+    ylab("Total Games")+
+    scale_x_discrete(limits= Home_away2$Year)
+
+```
+
+Home/Away records look balanced for most years, except a couple seasons. As we know, Kings played equal number of games at home and on the road. Let's plot line chart for this data.
+
+```{r echo = FALSE}
+
+# Plotting line graph for Home/Away comparison
+ggplot(Home_away2, aes(x=Year, y=value, fill=variable, colour=variable)) +
+   geom_line(size=1.0)+
+   geom_point()+
+   theme(legend.position="top", legend.title=element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          text = element_text(size = 10))+
+    ggtitle("Home/Away Venue Comparison") +
+    xlab("Year") +
+    ylab("Total Games")+
+    scale_x_discrete(limits= Home_away2$Year)
+
+```
+
+One thing that stood out to me is that there is a big difference in the year of 2009. Kings played more games on the road. Also, Kings did not qualify for play-offs in that season. Did more road games play role in it? I believe it is certainly possible. I would like to explor wins/losses record based on the venue.
+
+First, I will check the total wins at home and on the road.
+```{r echo = FALSE}
+
+# Printing total wins
+cat(sprintf("Total wins at home: %d\n", sum(Venue_wins3$Venue_Home)))
+cat(sprintf("Total wins on the road: %d\n", sum(Venue_wins3$Venue_Away)))
+
+```
+
+Nice, just as expected, more wins at home. Now, let's plot the line graph.
+
+```{r echo = FALSE}
+
+# Plotting the line graph to compare total wins
+ggplot(Venue_wins3, aes(Year)) + 
+  geom_line(aes(y = Venue_Home, colour = "Home")) + 
+  geom_line(aes(y = Venue_Away, colour = "Away")) +
+  theme(legend.position="top", legend.title=element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          text = element_text(size = 10))+
+  ggtitle("Home/Away Wins Venue Comparison") +
+    xlab("Year") +
+    ylab("Total Wins")+
+  scale_x_continuous(breaks = seq(2005, 2018, 1),
+                     limits=c(2005, 2018))
+
+```
+
+Home dominance is clearly visible from 2005 to 2018. There are only 2 years when they won more games on the road. In hockey, winning away games is very crucial.
+
+Let's do similar analysis for losses.
+
+```{r echo = FALSE}
+
+# Printing total losses
+cat(sprintf("Total losses at home: %d\n", sum(Venue_losses3$Venue_Home)))
+cat(sprintf("Total losses on the road: %d\n", sum(Venue_losses3$Venue_Away)))
+
+```
+
+Another indication shows that Kings have to work on their road record. I would like to the plot line graph to see yearly road performance.
+
+```{r echo = FALSE}
+
+# Plotting the line graph to compare total losses
+ggplot(Venue_losses3, aes(Year)) + 
+  geom_line(aes(y = Venue_Home, colour = "Home")) + 
+  geom_line(aes(y = Venue_Away, colour = "Away")) +
+  theme(legend.position="top", legend.title=element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          text = element_text(size = 10))+
+  ggtitle("Home/Away Losses Venue Comparison") +
+    xlab("Year") +
+    ylab("Total Wins")+
+  scale_x_continuous(breaks = seq(2005, 2018, 1),
+                     limits=c(2005, 2018))
+
+```
+
+Ok, so Kings consistently lost more road games over the years. This is a huge area for improvement.
+
+# Bivariate Analysis
+After comparing multiple variables, I found some more data about Kings performance between 2005 and 2018. Kings lost more games than they won. Performance against Sharks (30 wins, 46 losses) and Ducks (33 wins, 44 losses) was full of disappointment. Kings had good records against Oilers, Bruins, Jackets, and Avalanche. Kings had best road records in 2009.
+
+
+# Multivariate Plots
+
+In next section, I would like analyze the records against each division.
+
+```{r echo = FALSE}
+
+# Creating new data frame for divisions
+Divisions <- LA_Kings %>% 
+            select(Year, Against_Division, Win, Loss, Goals_For, Goals_Against)
+
+# Creating data frame for Atlantic division
+Atlantic_division <- subset(Divisions, Against_Division == "Atlantic")
+
+# Grouping Atlantic division by year
+Atlantic_division2 <- Atlantic_division %>%
+                select(Year, Win, Loss, Goals_For, Goals_Against) %>%
+                group_by(Year) %>%
+                summarise_all(funs(sum))
+
+
+# Creating data frame for Metropolitan division
+Metropolitan_division <- subset(Divisions, Against_Division == "Metropolitan")
+
+# Grouping Metropolitan division by year
+Metropolitan_division2 <- Metropolitan_division %>%
+                select(Year, Win, Loss, Goals_For, Goals_Against) %>%
+                group_by(Year) %>%
+                summarise_all(funs(sum))
+
+
+# Creating data frame for Central division
+Central_division <- subset(Divisions, Against_Division == "Central")
+
+# Grouping Central division by year
+Central_division2 <- Central_division %>%
+                select(Year, Win, Loss, Goals_For, Goals_Against) %>%
+                group_by(Year) %>%
+                summarise_all(funs(sum))
+
+
+# Creating data frame for Pacific division
+Pacific_division <- subset(Divisions, Against_Division == "Pacific")
+
+# Grouping Pacific division by year
+Pacific_division2 <- Pacific_division %>%
+                select(Year, Win, Loss, Goals_For, Goals_Against) %>%
+                group_by(Year) %>%
+                summarise_all(funs(sum))
+
+```
+
+I would like to plot separate bar chart for each division to see how it looks next to each other.
+
+
+```{r echo = FALSE}
+
+# Comparing bar chart for each division
+p1 <- ggplot(aes(Year, Win), data = Atlantic_division2)+
+  geom_bar(stat="identity")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggtitle("Wins Against Atlantic Division") +
+    xlab("Year") +
+    ylab("Total")+
+    scale_x_discrete(limits= Atlantic_division2$Year)+
+    scale_y_continuous(breaks = seq(0, 23, 5),
+                     limits=c(0, 23))
+
+p2 <- ggplot(aes(Year, Win), data = Metropolitan_division2)+
+  geom_bar(stat="identity")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggtitle("Wins Against Metropolitan Division") +
+    xlab("Year") +
+    ylab("Total")+
+    scale_x_discrete(limits= Metropolitan_division2$Year)+
+    scale_y_continuous(breaks = seq(0, 23, 5),
+                     limits=c(0, 23))
+  
+p3 <- ggplot(aes(Year, Win), data = Central_division2)+
+  geom_bar(stat="identity")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggtitle("Wins Against Central Division") +
+    xlab("Year") +
+    ylab("Total")+
+    scale_x_discrete(limits= Central_division2$Year)+
+    scale_y_continuous(breaks = seq(0, 23, 5),
+                     limits=c(0, 23))
+  
+p4 <- ggplot(aes(Year, Win), data = Pacific_division2)+
+  geom_bar(stat="identity")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggtitle("Wins Against Pacific Division") +
+  xlab("Year") +
+  ylab("Total")+
+  scale_x_discrete(limits= Pacific_division2$Year)+
+  scale_y_continuous(breaks = seq(0, 23, 5),
+                     limits=c(0, 23))
+
+grid.arrange(p1,p2, p3, p4)
+
+```
+
+Ok, so as we can see in the charts, Kings have best record against Pacific division. Kings' winning numbers are shrinking as they move away from pacific ocean towards atlantic ocean.
+
+Let's see Kings' losses record in similar fashion.
+
+```{r echo = FALSE}
+
+# Comparing bar chart for each division
+q1 <- ggplot(aes(Year, Loss), data = Atlantic_division2)+
+  geom_bar(stat="identity")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggtitle("Losses Against Atlantic Division") +
+    xlab("Year") +
+    ylab("Total")+
+    scale_x_discrete(limits= Atlantic_division2$Year)+
+    scale_y_continuous(breaks = seq(0, 30, 5),
+                     limits=c(0, 30))
+
+q2 <- ggplot(aes(Year, Loss), data = Metropolitan_division2)+
+  geom_bar(stat="identity")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggtitle("Losses Against Metropolitan Division") +
+    xlab("Year") +
+    ylab("Total")+
+    scale_x_discrete(limits= Metropolitan_division2$Year)+
+    scale_y_continuous(breaks = seq(0, 30, 5),
+                     limits=c(0, 30))
+  
+q3 <- ggplot(aes(Year, Loss), data = Central_division2)+
+  geom_bar(stat="identity")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggtitle("Losses Against Central Division") +
+    xlab("Year") +
+    ylab("Total")+
+    scale_x_discrete(limits= Central_division2$Year)+
+    scale_y_continuous(breaks = seq(0, 30, 5),
+                     limits=c(0, 30))
+  
+q4 <- ggplot(aes(Year, Loss), data = Pacific_division2)+
+  geom_bar(stat="identity")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggtitle("Losses Against Pacific Division") +
+  xlab("Year") +
+  ylab("Total")+
+  scale_x_discrete(limits= Pacific_division2$Year)+
+  scale_y_continuous(breaks = seq(0, 30, 5),
+                     limits=c(0, 30))
+
+grid.arrange(q1,q2, q3, q4)
+
+```
+
+Wow! the bars are once again high against pacific division. They lost a lot of games against pacific division. It is clear that for Kings to be a successful team, they have to conquer pacific divison.
+
+
+# Multivariate Analysis
+Kings are playing a lot of games against pacific division teams, it is beacuse Kings are from pacific division. Their record does not seem to be that great against pacific division. They must win against this division if they are dreaming of another Stanley Cup.
+
+
+
+# Final Plots and Summary
+
+### Plot One
+
+This first chart I picked is Kings' losses record against each team.
+
+```{r fig.height = 12, fig.width = 8, echo = FALSE}
+
+# Creating color pallette for the bar chart
+color_palette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#D55E00")
+
+# Plotting horizontal bar chart to display loss record against each team
+ggplot(loss_teams, aes(x = as.factor(Against_Team)))+
+  geom_bar(aes(fill = as.factor(Against_Team)))+
+  coord_flip()+
+  theme(legend.position = "none")+
+  scale_fill_manual(values=color_palette)+
+  theme_bw()+
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        text = element_text(size = 20))+
+  geom_text(aes(label = ..count..),
+           hjust = 0, stat = 'count', colour = "black", size=8)+
+  ggtitle("Losses Against Each Team") +
+  xlab("Teams") +
+  ylab("Total Losses")
+
+```
+
+### Description One
+The reason I picked this chart is that Kings must find a way to beat 3 teams. The 3 teams are Sharks Ducks, and Coyotes. They are losing most of their games against these 3 teams.
+
+
+### Plot Two
+
+The second chart I picked is about Kings' on the road losses.
+
+```{r echo = FALSE}
+
+# Plotting the line graph to compare total losses
+ggplot(Venue_losses3, aes(Year)) + 
+  geom_line(aes(y = Venue_Home, colour = "Home"), size = 1.0) + 
+  geom_line(aes(y = Venue_Away, colour = "Away"), size = 1.0) +
+  theme(legend.position="top", legend.title=element_blank(),
+        panel.grid.major = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        text = element_text(size = 10))+
+  ggtitle("Home/Away Losses Venue Comparison") +
+    xlab("Year") +
+    ylab("Total Wins")+
+  scale_x_continuous(breaks = seq(2005, 2018, 1),
+                     limits=c(2005, 2018))
+
+
+```
+
+### Description Two
+I think this chart is also very important. Kings are losing way too many games on the road. They have to work on their road records and figure out how to win away from home.
+
+
+
+
+### Plot Three
+
+
+```{r echo = FALSE}
+
+# Comparing bar chart for each division
+L1 <- ggplot(aes(Year, Loss), data = Atlantic_division2)+
+  geom_bar(stat="identity", fill = 'darkgreen')+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggtitle("Losses Against Atlantic Division") +
+    xlab("Year") +
+    ylab("Total")+
+    scale_x_discrete(limits= Atlantic_division2$Year)+
+    scale_y_continuous(breaks = seq(0, 30, 5),
+                     limits=c(0, 30))
+
+L2 <- ggplot(aes(Year, Loss), data = Metropolitan_division2)+
+  geom_bar(stat="identity", fill = 'orange')+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggtitle("Losses Against Metropolitan Division") +
+    xlab("Year") +
+    ylab("Total")+
+    scale_x_discrete(limits= Metropolitan_division2$Year)+
+    scale_y_continuous(breaks = seq(0, 30, 5),
+                     limits=c(0, 30))
+  
+L3 <- ggplot(aes(Year, Loss), data = Central_division2)+
+  geom_bar(stat="identity", fill = 'blue')+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggtitle("Losses Against Central Division") +
+    xlab("Year") +
+    ylab("Total")+
+    scale_x_discrete(limits= Central_division2$Year)+
+    scale_y_continuous(breaks = seq(0, 30, 5),
+                     limits=c(0, 30))
+  
+L4 <- ggplot(aes(Year, Loss), data = Pacific_division2)+
+  geom_bar(stat="identity", fill = 'magenta')+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  ggtitle("Losses Against Pacific Division") +
+  xlab("Year") +
+  ylab("Total")+
+  scale_x_discrete(limits= Pacific_division2$Year)+
+  scale_y_continuous(breaks = seq(0, 30, 5),
+                     limits=c(0, 30))
+
+grid.arrange(L1,L2, L3, L4)
+
+```
+
+### Description Three
+The reason for this chart is that Kings had very poor record against pacific division. Their record against central division is not that great either. I think this weakness should be a top priority for Kings.
+
+
+# Reflection
+I have been watching Kings' hockey since 2005-06 season. After working on this project, I found a lot more details that I was not aware of. I certainly learned a lot about hockey data while working on this project. From now on, I will look at hockey stats on the TV during the game from a different perspective.  
+
+First of all, it was kind of challenging to find the data I wanted. I finally came across NHL/stats website where I was able to gather the data. The data was little challenging to work on. I had to do some data wrangling to format the data the way I wanted. For example, I separated home/away venue, separated year into different coloumn, added division data, merged losses and overtime losses into one coloumn etc. One big piece missing from this data was seasons. If I had more time, I would have added season information into this data so I can also analyze records by season.  
+
+After my analysis, I would suggest Kings to work on 3 weaknesses: they have to figure out a way to win more games against Sharks and Ducks, they must win a lot more games on the road, and they have to imporove their record against pacific and central divisions. If they can fix these 3 issues, I am sure I will be visiting the downtown soon to watch another victory parade.  
+
+
+Analysis By: Jatinder Dhandi  
+Fan: LA Kings  
+
